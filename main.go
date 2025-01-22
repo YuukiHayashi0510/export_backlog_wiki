@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/kenzo0107/backlog"
 )
@@ -64,7 +65,8 @@ func exportWiki(c *backlog.Client, baseDir string, wikiID int) error {
 
 	// wikiの保存
 	content := []byte(*wiki.Content)
-	contentPath := filepath.Join(wikiDir, "content.md")
+	sanitizeWikiName := sanitizeFilename(*wiki.Name)
+	contentPath := filepath.Join(wikiDir, sanitizeWikiName+".md")
 	if err := os.WriteFile(contentPath, content, 0644); err != nil {
 		return fmt.Errorf("failed to save wiki content: %v", err)
 	}
@@ -94,7 +96,7 @@ func exportWiki(c *backlog.Client, baseDir string, wikiID int) error {
 	if err != nil {
 		log.Printf("failed to marshal wiki metadata: %v", err)
 	} else {
-		metadataPath := filepath.Join(wikiDir, "metadata.json")
+		metadataPath := filepath.Join(wikiDir, sanitizeWikiName+"_metadata.json")
 		if err := os.WriteFile(metadataPath, metadata, 0644); err != nil {
 			log.Printf("failed to save wiki metadata: %v", err)
 		}
@@ -102,4 +104,15 @@ func exportWiki(c *backlog.Client, baseDir string, wikiID int) error {
 
 	log.Printf("successfully exported wiki '%s' to directory: %s", *wiki.Name, wikiDir)
 	return nil
+}
+
+// ファイル名として使用できない文字をサニタイズする関数
+func sanitizeFilename(filename string) string {
+	// Windowsでも使用できるよう、一般的な禁止文字をすべて置換
+	invalidChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
+	result := filename
+	for _, char := range invalidChars {
+		result = strings.ReplaceAll(result, char, "_")
+	}
+	return result
 }
